@@ -140,10 +140,6 @@ printf "* Renaming files..."
 printf "* Removing setup files..."
 (rm -rf $installdir/qsw106.zip $installdir/cfort-gpl.zip $installdir/cfort-non-gpl.zip $installdir/cfort-bin-x86.zip $installdir/cfort-bin-x64.zip $installdir/cfort.ini && echo done) || echo fail
 
-# Remove distribution files
-printf "* Removing setup files..."
-(rm -rf $installdir/qsw106.zip $installdir/cfort-gpl.zip $installdir/cfort-non-gpl.zip $installdir/cfort-bin-x86.zip $installdir/cfort-bin-x64.zip $installdir/cfort.ini && echo done) || echo fail
-
 # Create symlinks
 printf "* Creating symlinks to configuration files..."
 [ -e $confdir/client.conf ] || touch $confdir/client.conf
