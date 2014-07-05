@@ -64,8 +64,8 @@ else
 fi
 
 # Download cfort.ini
-wget --inet4-only -q -O cfort.ini https://raw.githubusercontent.com/Classic-Fortress/client-installer/master/cfort.ini || error "Failed to download cfort.ini"
-[ -s "cfort.ini" ] || error "Downloaded cfort.ini but file is empty?! Exiting."
+wget --inet4-only -q -O $installdir/cfort.ini https://raw.githubusercontent.com/Classic-Fortress/client-installer/master/cfort.ini || error "Failed to download cfort.ini"
+[ -s "$installdir/cfort.ini" ] || error "Downloaded cfort.ini but file is empty?! Exiting."
 
 # List all the available mirrors
 echo "From what mirror would you like to download Classic Fortress?"
@@ -88,48 +88,45 @@ if [ -n "$mirror" && $mirrors > 1 ]; then
 else
     mirror=$(grep "^1=[fhtp]\{3,4\}://[^ ]*$" cfort.ini | cut -d "=" -f2)
 fi
-mkdir -p fortress qw
+mkdir -p $installdir/fortress $installdir/qw
 echo;echo
 
 # Download all the packages
 echo "=== Downloading ==="
-wget --inet4-only -O qsw106.zip $mirror/qsw106.zip || error "Failed to download $mirror/qsw106.zip"
-wget --inet4-only -O cfort-gpl.zip $mirror/cfort-gpl.zip || error "Failed to download $mirror/cfort-gpl.zip"
-wget --inet4-only -O cfort-non-gpl.zip $mirror/cfort-non-gpl.zip || error "Failed to download $mirror/cfort-non-gpl.zip"
-if [ $(getconf LONG_BIT) = 64 ]
-then
-    wget --inet4-only -O cfort-bin-x64.zip $mirror/cfort-bin-x64.zip || error "Failed to download $mirror/cfort-bin-x64.zip"
-    [ -s "cfort-bin-x64.zip" ] || error "Downloaded cfort-bin-x64.zip but file is empty?!"
+wget --inet4-only -O $installdir/qsw106.zip $mirror/qsw106.zip || error "Failed to download $mirror/qsw106.zip"
+wget --inet4-only -O $installdir/cfort-gpl.zip $mirror/cfort-gpl.zip || error "Failed to download $mirror/cfort-gpl.zip"
+wget --inet4-only -O $installdir/cfort-non-gpl.zip $mirror/cfort-non-gpl.zip || error "Failed to download $mirror/cfort-non-gpl.zip"
+if [ $(getconf LONG_BIT) = 64 ]; then
+    wget --inet4-only -O $installdir/cfort-bin-x64.zip $mirror/cfort-bin-x64.zip || error "Failed to download $mirror/cfort-bin-x64.zip"
+    [ -s "$installdir/cfort-bin-x64.zip" ] || error "Downloaded cfort-bin-x64.zip but file is empty?!"
 else
-    wget --inet4-only -O cfort-bin-x86.zip $mirror/cfort-bin-x86.zip || error "Failed to download $mirror/cfort-bin-x86.zip"
-    [ -s "cfort-bin-x86.zip" ] || error "Downloaded cfort-bin-x86.zip but file is empty?!"
+    wget --inet4-only -O $installdir/cfort-bin-x86.zip $mirror/cfort-bin-x86.zip || error "Failed to download $mirror/cfort-bin-x86.zip"
+    [ -s "$installdir/cfort-bin-x86.zip" ] || error "Downloaded cfort-bin-x86.zip but file is empty?!"
 fi
 
-[ -s "qsw106.zip" ] || error "Downloaded qwsv106.zip but file is empty?!"
-[ -s "cfort-gpl.zip" ] || error "Downloaded cfort-gpl.zip but file is empty?!"
-[ -s "cfort-non-gpl.zip" ] || error "Downloaded cfort-non-gpl.zip but file is empty?!"
+[ -s "$installdir/qsw106.zip" ] || error "Downloaded qwsv106.zip but file is empty?!"
+[ -s "$installdir/cfort-gpl.zip" ] || error "Downloaded cfort-gpl.zip but file is empty?!"
+[ -s "$installdir/cfort-non-gpl.zip" ] || error "Downloaded cfort-non-gpl.zip but file is empty?!"
 
 # Download configuration files
-wget --inet4-only -O fortress/default.cfg https://raw.githubusercontent.com/Classic-Fortress/client-scripts/master/default.cfg || error "Failed to download default.cfg"
+wget --inet4-only -O $installdir/fortress/default.cfg https://raw.githubusercontent.com/Classic-Fortress/client-scripts/master/default.cfg || error "Failed to download default.cfg"
 
-[ -s "fortress/default.cfg" ] || error "Downloaded fortress/default.cfg but file is empty?!"
-
-echo
+[ -s "$installdir/fortress/default.cfg" ] || error "Downloaded fortress/default.cfg but file is empty?!"
 
 # Extract all the packages
 echo "=== Installing ==="
 printf "* Extracting Quake Shareware..."
-(unzip -qqo qsw106.zip ID1/PAK0.PAK 2>/dev/null && echo done) || echo fail
+(unzip -qqo $installdir/qsw106.zip ID1/PAK0.PAK 2>/dev/null && echo done) || echo fail
 printf "* Extracting Classic Fortress setup files (1 of 2)..."
-(unzip -qqo cfort-gpl.zip 2>/dev/null && echo done) || echo fail
+(unzip -qqo $installdir/cfort-gpl.zip 2>/dev/null && echo done) || echo fail
 printf "* Extracting Classic Fortress setup files (2 of 2)..."
-(unzip -qqo cfort-non-gpl.zip 2>/dev/null && echo done) || echo fail
+(unzip -qqo $installdir/cfort-non-gpl.zip 2>/dev/null && echo done) || echo fail
 printf "* Extracting Classic Fortress binaries..."
 if [ $(getconf LONG_BIT) = 64 ]
 then
-    (unzip -qqo cfort-bin-x64.zip 2>/dev/null && echo done) || echo fail
+    (unzip -qqo $installdir/cfort-bin-x64.zip 2>/dev/null && echo done) || echo fail
 else
-    (unzip -qqo cfort-bin-x86.zip 2>/dev/null && echo done) || echo fail
+    (unzip -qqo $installdir/cfort-bin-x86.zip 2>/dev/null && echo done) || echo fail
 fi
 echo
 
