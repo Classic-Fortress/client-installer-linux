@@ -75,7 +75,7 @@ grep "[0-9]\{1,2\}=\".*" cfort.ini | cut -d "\"" -f2 | nl
 printf "Enter mirror number [random]: " 
 read mirror
 mirror=$(grep "^$mirror=[fhtp]\{3,4\}://[^ ]*$" cfort.ini | cut -d "=" -f2)
-if [ -n "$mirror" && $mirrors > 1 ]; then
+if [ -n "$mirror" ] && [ $mirrors > 1 ]; then
     range=$(expr$(grep "[0-9]\{1,2\}=\".*" cfort.ini | cut -d "\"" -f2 | nl | tail -n1 | cut -f1) + 1)
     while [ -z "$mirror" ]
     do
