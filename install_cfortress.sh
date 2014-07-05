@@ -146,13 +146,21 @@ printf "* Removing setup files..."
 
 # Create symlinks
 printf "* Creating symlinks to configuration files..."
-[ -e $installdir/fortress/config.cfg ] || touch $installdir/fortress/config.cfg
-[ -e $confdir/client.conf ] || ln -s $installdir/fortress/config.cfg $confdir/client.conf
+[ -e $confdir/client.conf ] || touch $confdir/client.conf
+[ -L $installdir/fortress/config.cfg ] || ln -s $confdir/client.conf $installdir/fortress/config.cfg
+echo "done"
+
+# Create media folders
+printf "* Creating media folders..."
+mkdir -p $confdir/demos $confdir/screenshots $confdir/logs
+[ -e $installdir/fortress/demos ] || ln -s $confdir/demos $installdir/fortress/demos
+[ -e $installdir/fortress/screenshots ] || ln -s $confdir/screenshots $installdir/fortress/screenshots
+[ -e $installdir/fortress/logs ] || ln -s $confdir/logs $installdir/fortress/logs
 echo "done"
 
 # Convert DOS files to UNIX
 printf "* Converting DOS files to UNIX..."
-for file in $(find $installdir -iname "*.cfg" -or -iname "*.txt" -or -iname "*.sh" -or -iname "README")
+for file in $(find $installdir -type f -iname "*.cfg" -or -iname "*.txt" -or -iname "*.sh" -or -iname "README")
 do
     [ ! -f "$file" ] || cat $file|tr -d '\015' > tmpfile
     rm $file
