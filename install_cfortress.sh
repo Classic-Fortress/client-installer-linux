@@ -61,6 +61,8 @@ if [ -w "$installdir" ]; then
 else
     error "You do not have write access to $installdir. Exiting."
 fi
+echo;echo "* Installing Classic Fortress into: $installdir"
+echo
 
 # Download cfort.ini
 wget --inet4-only -q -O $installdir/cfort.ini https://raw.githubusercontent.com/Classic-Fortress/client-installer/master/cfort.ini || error "Failed to download cfort.ini"
