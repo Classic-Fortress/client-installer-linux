@@ -54,10 +54,11 @@ else
 fi
 if [ -w "$installdir" ]
 then
+    eval confdir="~/.cfortress"
+    mkdir -p $confdir
     cd $installdir
     installdir=$(pwd)
-    mkdir -p ~/.cfortress
-    echo $installdir > ~/.cfortress/install_dir
+    echo $installdir > $confdir/install_dir
 else
     error "You do not have write access to $installdir. Exiting."
 fi
@@ -148,7 +149,7 @@ printf "* Removing setup files..."
 # Create symlinks
 printf "* Creating symlinks to configuration files..."
 [ -e $installdir/fortress/config.cfg ] || touch $installdir/fortress/config.cfg
-[ -e ~/.cfortress/client.conf ] || ln -s $installdir/fortress/config.cfg ~/.cfortress/client.conf
+[ -e $confdir/client.conf ] || ln -s $installdir/fortress/config.cfg $confdir/client.conf
 echo "done"
 
 # Convert DOS files to UNIX
