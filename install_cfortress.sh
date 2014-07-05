@@ -9,9 +9,9 @@ error() {
     printf "ERROR: %s\n" "$*"
     [ -n "$created" ] || {
         cd
-        echo "The directory $directory is about to be removed, press ENTER to confirm or CTRL+C to exit." 
+        echo "The directory $installdir is about to be removed, press ENTER to confirm or CTRL+C to exit." 
         read dummy
-        rm -rf $directory
+        rm -rf $installdir
     }
     exit 1
 }
@@ -31,35 +31,35 @@ echo
 
 # Create the Classic Fortress folder
 printf "Where do you want to install Classic Fortress? [$defaultdir]: " 
-read directory
+read installdir
 
-eval directory=$directory
+eval installdir=$installdir
 
-[ ! -z "$directory" ] || eval directory=$defaultdir
+[ ! -z "$installdir" ] || eval installdir=$defaultdir
 
-if [ -d "$directory" ]; then
-    if [ -w "$directory" ]; then
+if [ -d "$installdir" ]; then
+    if [ -w "$installdir" ]; then
         created=0
     else
-        error "You do not have write access to '$directory'. Exiting."
+        error "You do not have write access to '$installdir'. Exiting."
     fi
 else
-    if [ -e "$directory" ]; then
-        error "'$directory' already exists but is a file, not a directory. Exiting."
+    if [ -e "$installdir" ]; then
+        error "'$installdir' already exists but is a file, not a directory. Exiting."
         exit
     else
-        mkdir -p $directory 2>/dev/null || error "Failed to create install dir: '$directory'"
+        mkdir -p $installdir 2>/dev/null || error "Failed to create install dir: '$installdir'"
         created=1
     fi
 fi
-if [ -w "$directory" ]
+if [ -w "$installdir" ]
 then
-    cd $directory
-    directory=$(pwd)
+    cd $installdir
+    installdir=$(pwd)
     mkdir -p ~/.cfortress
-    echo $directory > ~/.cfortress/install_dir
+    echo $installdir > ~/.cfortress/install_dir
 else
-    error "You do not have write access to $directory. Exiting."
+    error "You do not have write access to $installdir. Exiting."
 fi
 
 # Download cfort.ini
@@ -135,25 +135,25 @@ echo
 # Rename files
 echo "=== Cleaning up ==="
 printf "* Renaming files..."
-(mv $directory/ID1/PAK0.PAK $directory/qw/pak0.pak 2>/dev/null && rm -rf $directory/ID1 && echo done) || echo fail
+(mv $installdir/ID1/PAK0.PAK $installdir/qw/pak0.pak 2>/dev/null && rm -rf $installdir/ID1 && echo done) || echo fail
 
 # Remove distribution files
 printf "* Removing setup files..."
-(rm -rf $directory/qsw106.zip $directory/cfort-gpl.zip $directory/cfort-non-gpl.zip $directory/cfort-bin-x86.zip $directory/cfort-bin-x64.zip $directory/cfort.ini && echo done) || echo fail
+(rm -rf $installdir/qsw106.zip $installdir/cfort-gpl.zip $installdir/cfort-non-gpl.zip $installdir/cfort-bin-x86.zip $installdir/cfort-bin-x64.zip $installdir/cfort.ini && echo done) || echo fail
 
 # Remove distribution files
 printf "* Removing setup files..."
-(rm -rf $directory/qsw106.zip $directory/cfort-gpl.zip $directory/cfort-non-gpl.zip $directory/cfort-bin-x86.zip $directory/cfort-bin-x64.zip $directory/cfort.ini && echo done) || echo fail
+(rm -rf $installdir/qsw106.zip $installdir/cfort-gpl.zip $installdir/cfort-non-gpl.zip $installdir/cfort-bin-x86.zip $installdir/cfort-bin-x64.zip $installdir/cfort.ini && echo done) || echo fail
 
 # Create symlinks
 printf "* Creating symlinks to configuration files..."
-[ -e $directory/fortress/config.cfg ] || touch $directory/fortress/config.cfg
-[ -e ~/.cfortress/client.conf ] || ln -s $directory/fortress/config.cfg ~/.cfortress/client.conf
+[ -e $installdir/fortress/config.cfg ] || touch $installdir/fortress/config.cfg
+[ -e ~/.cfortress/client.conf ] || ln -s $installdir/fortress/config.cfg ~/.cfortress/client.conf
 echo "done"
 
 # Convert DOS files to UNIX
 printf "* Converting DOS files to UNIX..."
-for file in $(find $directory -iname "*.cfg" -or -iname "*.txt" -or -iname "*.sh" -or -iname "README")
+for file in $(find $installdir -iname "*.cfg" -or -iname "*.txt" -or -iname "*.sh" -or -iname "README")
 do
     [ ! -f "$file" ] || cat $file|tr -d '\015' > tmpfile
     rm $file
@@ -163,9 +163,9 @@ echo "done"
 
 # Set the correct permissions
 printf "* Setting permissions..."
-find $directory -type f -exec chmod -f 644 {} \;
-find $directory -type d -exec chmod -f 755 {} \;
-chmod -f +x $directory/cfortress 2>/dev/null
+find $installdir -type f -exec chmod -f 644 {} \;
+find $installdir -type d -exec chmod -f 755 {} \;
+chmod -f +x $installdir/cfortress 2>/dev/null
 echo "done"
 
 echo;echo "Installation complete!"
