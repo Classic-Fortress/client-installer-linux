@@ -140,15 +140,15 @@ printf "* Renaming files..."
 printf "* Removing setup files..."
 (rm -rf $installdir/qsw106.zip $installdir/cfort-gpl.zip $installdir/cfort-non-gpl.zip $installdir/cfort-bin-x86.zip $installdir/cfort-bin-x64.zip $installdir/cfort.ini && echo done) || echo fail
 
-# Create symlinks
-printf "* Creating symlinks to configuration files..."
-[ -e $confdir/client.conf ] || touch $confdir/client.conf
-[ -L $installdir/fortress/config.cfg ] || ln -s $confdir/client.conf $installdir/fortress/config.cfg
-echo "done"
-
 # Create media folders
 printf "* Creating media folders..."
 mkdir -p $confdir/demos $confdir/screenshots $confdir/logs
+echo "done"
+
+# Create symlinks
+printf "* Creating symlinks..."
+[ -e $confdir/client.conf ] || touch $confdir/client.conf
+[ -L $installdir/fortress/config.cfg ] || ln -s $confdir/client.conf $installdir/fortress/config.cfg
 [ -e $installdir/fortress/demos ] || ln -s $confdir/demos $installdir/fortress/demos
 [ -e $installdir/fortress/screenshots ] || ln -s $confdir/screenshots $installdir/fortress/screenshots
 [ -e $installdir/fortress/logs ] || ln -s $confdir/logs $installdir/fortress/logs
