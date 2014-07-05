@@ -52,8 +52,7 @@ else
         created=1
     fi
 fi
-if [ -w "$installdir" ]
-then
+if [ -w "$installdir" ]; then
     eval confdir="~/.cfortress"
     mkdir -p $confdir
     cd $installdir
@@ -75,7 +74,6 @@ printf "Enter mirror number [random]: "
 read mirror
 mirror=$(grep "^$mirror=[fhtp]\{3,4\}://[^ ]*$" cfort.ini | cut -d "=" -f2)
 if [ -n "$mirror" && $mirrors > 1 ]; then
-    echo;echo -n "* Using mirror: "
     range=$(expr$(grep "[0-9]\{1,2\}=\".*" cfort.ini | cut -d "\"" -f2 | nl | tail -n1 | cut -f1) + 1)
     while [ -z "$mirror" ]
     do
@@ -84,12 +82,13 @@ if [ -n "$mirror" && $mirrors > 1 ]; then
         mirror=$(grep "^$number=[fhtp]\{3,4\}://[^ ]*$" cfort.ini | cut -d "=" -f2)
         mirrorname=$(grep "^$number=\".*" cfort.ini | cut -d "\"" -f2)
     done
-    echo "$mirrorname"
 else
     mirror=$(grep "^1=[fhtp]\{3,4\}://[^ ]*$" cfort.ini | cut -d "=" -f2)
+    mirrorname=$(grep "^1=\".*" cfort.ini | cut -d "\"" -f2)
 fi
+echo;echo "* Using mirror: $mirrorname"
 mkdir -p $installdir/fortress $installdir/qw
-echo;echo
+echo
 
 # Download all the packages
 echo "=== Downloading ==="
