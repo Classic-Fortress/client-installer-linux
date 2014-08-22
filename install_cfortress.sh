@@ -1,175 +1,202 @@
 #!/bin/sh
 
-# Classic Fortress Client Installer Script (for Linux)
-# by Empezar & dimman
+#################################################
+## CLASSIC FORTRESS CLIENT INSTALLATION SCRIPT ##
+#################################################
 
-defaultdir="~/cfortress"
+######################
+##  INITIALIZATION  ##
+######################
 
+# functions
 error() {
-    printf "ERROR: %s\n" "$*"
-    [ -n "$created" ] || {
-        cd
-        echo "The directory $installdir is about to be removed, press ENTER to confirm or CTRL+C to exit." 
-        read dummy
-        rm -rf $installdir
-    }
+    echo
+    printf "%s\n" "$*"
+
+    [ -d $tmpdir ] && rm -rf $tmpdir
+
     exit 1
 }
+iffailed() {
+    [ $fail -eq 1 ] && {
+        echo "fail"
+        printf "%s\n" "$*"
+        exit 1
+    }
 
-# Check if unzip is installed
-which unzip >/dev/null || error "The package 'unzip' is not installed. Please install it and run the installation again."
+    return 1
+}
 
-# Check if curl is installed
-which curl >/dev/null || error "The package 'curl' is not installed. Please install it and run the installation again."
+# initialize variables
+eval settingsdir="~/.cfortress"
+eval tmpdir="~/.cfortress_install"
+defaultdir="~/cfortress"
+github=https://raw.githubusercontent.com/Classic-Fortress/client-scripts/master
+fail=0
 
-echo
-echo "Welcome to the Classic Fortress Client installation"
-echo "==================================================="
-echo
-echo "Press ENTER to use [default] option."
-echo
+# initialize folders
+rm -rf $tmpdir 2>/dev/null || error "ERROR: Could not remove temporary directory '$tmpdir'. Perhaps you have some permission problems."
+mkdir $tmpdir 2>/dev/null || error "ERROR: Could not create setup folder '$tmpdir'. Perhaps you have some permission problems."
+mkdir -p $tmpdir/game/fortress $tmpdir/game/id1 $tmpdir/game/qtv $tmpdir/game/qw $tmpdir/game/qwfwd
 
-# Create the Classic Fortress folder
-printf "Where do you want to install Classic Fortress? [$defaultdir]: " 
+# check if unzip and curl are installed
+[ `which unzip` ] || error "ERROR: The package 'unzip' is not installed. Please install it and run the installation again."
+[ `which curl` ] || error "ERROR: The package 'curl' is not installed. Please install it and run the installation again."
+
+# download cfort.ini
+curl --silent --output $tmpdir/cfort.ini https://raw.githubusercontent.com/Classic-Fortress/client-installer/master/cfort.ini || \
+    error "ERROR: Failed to download 'cfort.ini' (mirror information) from remote server. Try again later."
+
+[ -s "$tmpdir/cfort.ini" ] || error "ERROR: Downloaded 'cfort.ini' but file is empty. Try again later."
+
+######################
+## FOLDER SELECTION ##
+######################
+
+# select install directory
+printf "Where do you want to install Classic Fortress client? [$defaultdir]: " 
 read installdir
-
 eval installdir=$installdir
 
-[ ! -z "$installdir" ] || eval installdir=$defaultdir
+# use default install directory if user did not input a directory
+[ -z "$installdir" ] && eval installdir=$defaultdir
 
-if [ -d "$installdir" ]; then
-    if [ -w "$installdir" ]; then
-        created=0
-    else
-        error "You do not have write access to '$installdir'. Exiting."
-    fi
-else
-    if [ -e "$installdir" ]; then
-        error "'$installdir' already exists but is a file, not a directory. Exiting."
-        exit
-    else
-        mkdir -p $installdir 2>/dev/null || error "Failed to create install dir: '$installdir'"
-        created=1
-    fi
-fi
-if [ -w "$installdir" ]; then
-    eval confdir="~/.cfortress"
-    mkdir -p $confdir
-    cd $installdir
-    installdir=$(pwd)
-    echo $installdir > $confdir/install_dir
-else
-    error "You do not have write access to $installdir. Exiting."
-fi
-echo;echo "* Installing Classic Fortress into: $installdir"
+# check if selected directory is writable and isn't a file
+[ -f $installdir ] && error "ERROR: '$installdir' already exists and is a file, not a directory. Exiting."
+[ ! -w ${installdir%/*} ] && error "ERROR: You do not have write access to '$installdir'. Exiting."
+
+######################
+## MIRROR SELECTION ##
+######################
+
 echo
+echo "Using directory '$installdir'"
+echo
+echo "Select a download mirror:"
 
-# Download cfort.ini
-wget --inet4-only -q -O $installdir/cfort.ini https://raw.githubusercontent.com/Classic-Fortress/client-installer/master/cfort.ini || error "Failed to download cfort.ini"
-[ -s "$installdir/cfort.ini" ] || error "Downloaded cfort.ini but file is empty?! Exiting."
+# print mirrors and number them
+grep "[0-9]\{1,2\}=\".*" $tmpdir/cfort.ini | cut -d "\"" -f2 | nl
 
-# List all the available mirrors
-echo "From what mirror would you like to download Classic Fortress?"
-mirrors=$(grep "[0-9]\{1,2\}=\".*" cfort.ini | cut -d "\"" -f2 | nl | wc -l)
-grep "[0-9]\{1,2\}=\".*" cfort.ini | cut -d "\"" -f2 | nl
-printf "Enter mirror number [random]: " 
+printf "Enter mirror number [random]: "
+
+# read user's input
 read mirror
-mirror=$(grep "^$mirror=[fhtp]\{3,4\}://[^ ]*$" cfort.ini | cut -d "=" -f2)
-if [ -n "$mirror" ] && [ $mirrors > 1 ]; then
-    range=$(expr$(grep "[0-9]\{1,2\}=\".*" cfort.ini | cut -d "\"" -f2 | nl | tail -n1 | cut -f1) + 1)
-    while [ -z "$mirror" ]
-    do
+
+# get mirror address from cfort.ini
+mirror=$(grep "^$mirror=[fhtp]\{3,4\}://[^ ]*$" $tmpdir/cfort.ini | cut -d "=" -f2)
+
+# count mirrors
+mirrors=$(grep "[0-9]=\"" $tmpdir/cfort.ini | wc -l)
+
+[ -z $mirror ] && [ $mirrors -gt 1 ] && {
+
+    # calculate range (amount of mirrors + 1)
+    range=$(expr$(grep "[0-9]=\"" $tmpdir/cfort.ini | nl | tail -n1 | cut -f1) + 1)
+
+    while [ -z "$mirror" ]; do
+
+        # generate a random number
         number=$RANDOM
+
+        # divide the random number with the calculated range and put the remainder in $number
         let "number %= $range"
-        mirror=$(grep "^$number=[fhtp]\{3,4\}://[^ ]*$" cfort.ini | cut -d "=" -f2)
-        mirrorname=$(grep "^$number=\".*" cfort.ini | cut -d "\"" -f2)
+
+        # get the nth mirror using the random number
+        mirror=$(grep "^$number=[fhtp]\{3,4\}://[^ ]*$" $tmpdir/cfort.ini | cut -d "=" -f2)
+
     done
-else
-    mirror=$(grep "^1=[fhtp]\{3,4\}://[^ ]*$" cfort.ini | cut -d "=" -f2)
-    mirrorname=$(grep "^1=\".*" cfort.ini | cut -d "\"" -f2)
-fi
-echo;echo "* Using mirror: $mirrorname"
-mkdir -p $installdir/fortress $installdir/qw
+
+} || mirror=$(grep "^1=[fhtp]\{3,4\}://[^ ]*$" $tmpdir/cfort.ini | cut -d "=" -f2)
+
+######################
+##     DOWNLOAD     ##
+######################
+
+
 echo
+printf "Downloading files.."
 
-# Download all the packages
-echo "=== Downloading ==="
-wget --inet4-only -O $installdir/qsw106.zip $mirror/qsw106.zip || error "Failed to download $mirror/qsw106.zip"
-wget --inet4-only -O $installdir/cfort-gpl.zip $mirror/cfort-gpl.zip || error "Failed to download $mirror/cfort-gpl.zip"
-wget --inet4-only -O $installdir/cfort-non-gpl.zip $mirror/cfort-non-gpl.zip || error "Failed to download $mirror/cfort-non-gpl.zip"
-if [ $(getconf LONG_BIT) = 64 ]; then
-    wget --inet4-only -O $installdir/cfort-bin-x64.zip $mirror/cfort-bin-x64.zip || error "Failed to download $mirror/cfort-bin-x64.zip"
-    [ -s "$installdir/cfort-bin-x64.zip" ] || error "Downloaded cfort-bin-x64.zip but file is empty?!"
-else
-    wget --inet4-only -O $installdir/cfort-bin-x86.zip $mirror/cfort-bin-x86.zip || error "Failed to download $mirror/cfort-bin-x86.zip"
-    [ -s "$installdir/cfort-bin-x86.zip" ] || error "Downloaded cfort-bin-x86.zip but file is empty?!"
-fi
+# detect system architecture
+[ $(getconf LONG_BIT) = 64 ] && arch=x64 || arch=x86
 
-[ -s "$installdir/qsw106.zip" ] || error "Downloaded qwsv106.zip but file is empty?!"
-[ -s "$installdir/cfort-gpl.zip" ] || error "Downloaded cfort-gpl.zip but file is empty?!"
-[ -s "$installdir/cfort-non-gpl.zip" ] || error "Downloaded cfort-non-gpl.zip but file is empty?!"
+# download game data
+curl --silent --output $tmpdir/qsw106.zip $mirror/qsw106.zip && printf "." || fail=1
+curl --silent --output $tmpdir/cfort-gpl.zip $mirror/cfort-gpl.zip && printf "." || fail=1
+curl --silent --output $tmpdir/cfort-non-gpl.zip $mirror/cfort-non-gpl.zip && printf "." || fail=1
+curl --silent --output $tmpdir/cfort-bin.zip $mirror/cfort-bin-$arch.zip && printf "." || fail=1
 
-# Download configuration files
-wget --inet4-only -O $installdir/fortress/default.cfg https://raw.githubusercontent.com/Classic-Fortress/client-scripts/master/default.cfg || error "Failed to download default.cfg"
+# check if files contain anything
+[ -s $tmpdir/qsw106.zip ] || fail=1
+[ -s $tmpdir/cfort-gpl.zip ] || fail=1
+[ -s $tmpdir/cfort-non-gpl.zip ] || fail=1
+[ -s $tmpdir/cfort-bin.zip ] || fail=1
 
-[ -s "$installdir/fortress/default.cfg" ] || error "Downloaded fortress/default.cfg but file is empty?!"
+iffailed "Could not download game files. Try again later." || printf "."
 
-# Extract all the packages
-echo "=== Installing ==="
-printf "* Extracting Quake Shareware..."
-(unzip -qqo $installdir/qsw106.zip ID1/PAK0.PAK 2>/dev/null && echo done) || echo fail
-printf "* Extracting Classic Fortress setup files (1 of 2)..."
-(unzip -qqo $installdir/cfort-gpl.zip 2>/dev/null && echo done) || echo fail
-printf "* Extracting Classic Fortress setup files (2 of 2)..."
-(unzip -qqo $installdir/cfort-non-gpl.zip 2>/dev/null && echo done) || echo fail
-printf "* Extracting Classic Fortress binaries..."
-if [ $(getconf LONG_BIT) = 64 ]
-then
-    (unzip -qqo $installdir/cfort-bin-x64.zip 2>/dev/null && echo done) || echo fail
-else
-    (unzip -qqo $installdir/cfort-bin-x86.zip 2>/dev/null && echo done) || echo fail
-fi
-echo
+# download configuration files
+curl --silent --output $tmpdir/game/fortress/default.cfg $github/default.cfg && printf "." || fail=1
 
-# Rename files
-echo "=== Cleaning up ==="
-printf "* Renaming files..."
-(mv $installdir/ID1/PAK0.PAK $installdir/qw/pak0.pak 2>/dev/null && rm -rf $installdir/ID1 && echo done) || echo fail
+iffailed "Could not download configuration file. Try again later."
 
-# Remove distribution files
-printf "* Removing setup files..."
-(rm -rf $installdir/qsw106.zip $installdir/cfort-gpl.zip $installdir/cfort-non-gpl.zip $installdir/cfort-bin-x86.zip $installdir/cfort-bin-x64.zip $installdir/cfort.ini && echo done) || echo fail
+[ -s $tmpdir/game/fortress/default.cfg ] || fail=1
 
-# Create media folders
-printf "* Creating media folders..."
-mkdir -p $confdir/demos $confdir/screenshots $confdir/logs
-echo "done"
+iffailed "Some of the downloaded files didn't contain any data. Try again later." || echo "done"
 
-# Create symlinks
-printf "* Creating symlinks..."
-[ -e $confdir/client.conf ] || touch $confdir/client.conf
-[ -L $installdir/fortress/config.cfg ] || ln -s $confdir/client.conf $installdir/fortress/config.cfg
-[ -e $installdir/fortress/demos ] || ln -s $confdir/demos $installdir/fortress/demos
-[ -e $installdir/fortress/screenshots ] || ln -s $confdir/screenshots $installdir/fortress/screenshots
-[ -e $installdir/fortress/logs ] || ln -s $confdir/logs $installdir/fortress/logs
-echo "done"
+######################
+##   INSTALLATION   ##
+######################
 
-# Convert DOS files to UNIX
-printf "* Converting DOS files to UNIX..."
-for file in $(find $installdir -type f -iname "*.cfg" -or -iname "*.txt" -or -iname "*.sh" -or -iname "README")
-do
-    [ ! -f "$file" ] || cat $file|tr -d '\015' > tmpfile
-    rm $file
-    mv tmpfile $file
+printf "Installing files.."
+
+unzip -qqo $tmpdir/qsw106.zip -d $tmpdir/game/ ID1/PAK0.PAK 2>/dev/null && printf "." || fail=1
+unzip -qqo $tmpdir/cfort-gpl.zip -d $tmpdir/game/ 2>/dev/null && printf "." || fail=1
+unzip -qqo $tmpdir/cfort-non-gpl.zip -d $tmpdir/game/ 2>/dev/null && printf "." || fail=1
+unzip -qqo $tmpdir/cfort-bin.zip -d $tmpdir/game/ 2>/dev/null && printf "." || fail=1
+
+iffailed "Could not unpack setup files. Something might be wrong with your installation directory."
+
+# rename pak0.pak
+(mv $tmpdir/game/ID1/PAK0.PAK $tmpdir/game/id1/pak0.pak 2>/dev/null && rm -rf $tmpdir/game/ID1) || fail=1
+
+iffailed "Could not rename pak0.pak. Something might be wrong with your installation directory." || printf "."
+
+# convert dos file endings to unix
+for file in $(find $tmpdir -type f -iname "*.cfg" -or -iname "*.txt" -or -iname "*.sh" -or -iname "README"); do
+    [ -f $file ] && cat $file | tr -d '\015' > $tmpdir/dos2unix 2>/dev/null || fail=1
+    (rm $file && mv $tmpdir/dos2unix $file 2>/dev/null) || fail=1
 done
-echo "done"
 
-# Set the correct permissions
-printf "* Setting permissions..."
-find $installdir -type f -exec chmod -f 644 {} \;
-find $installdir -type d -exec chmod -f 755 {} \;
-chmod -f +x $installdir/cfortress 2>/dev/null
-echo "done"
+iffailed "Could not convert files to unix line endings. Perhaps you have some permission problems." || printf "."
 
-echo;echo "Installation complete!"
+# set permissions
+find $tmpdir/game -type f -exec chmod -f 644 {} \;
+find $tmpdir/game -type d -exec chmod -f 755 {} \;
+chmod -f +x $tmpdir/game/cfortress 2>/dev/null || fail=1
+
+iffailed "Could not give game files the appropriate permissions. Perhaps you have some permission problems." || printf "."
+
+# copy game dir to install dir
+mkdir -p $installdir
+cp -a $tmpdir/game/* $installdir/ 2>/dev/null || fail=1
+
+iffailed "Could not move Classic Fortress client to '$installdir/'. Perhaps you have some permission problems." || printf "."
+
+# write install directory to install_dir
+mkdir -p $settingsdir
+echo $installdir > $settingsdir/install_dir 2>/dev/null || fail=1
+
+iffailed "Could not save install directory information to '$settingsdir/install_dir'. Perhaps you have some permission problems." || printf "."
+
+# create symlinks
+touch $installdir/fortress/config.cfg
+[ ! -L $installdir/fortress/config.cfg ] && (ln -s $settingsdir/client.conf $installdir/fortress/config.cfg 2>/dev/null || fail=1)
+
+iffailed "Could not create symlinks to configuration files. Perhaps you have some permission problems." || printf "."
+
+# remove temporary directory
+rm -rf $tmpdir 2>/dev/null || fail=1
+
+iffailed "Could not remove temporary directory. Perhaps you have some permission problems." || echo "done"
+
 echo
+echo "SUCCESS!"
